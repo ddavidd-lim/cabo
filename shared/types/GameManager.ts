@@ -28,6 +28,10 @@ export default class GameManager {
 
   endGame() {
     this.state.deck = new Deck();
+
+    for (const player of this.state.players) {
+      player.hand.cards = [];
+    }
   }
 
   swap(p1: number, p1pos: number, p2: number, p2pos: number) {
