@@ -21,7 +21,7 @@ export function createWebsocketServer() {
 
     socket.on("startGame", () => {
       game.startGame();
-      io.emit("stateUpdate", game.state);
+      io.emit("stateUpdate", game.getClientGameState(socket.id));
     });
 
     socket.on("peek", ({ playerIndex, pos }) => {

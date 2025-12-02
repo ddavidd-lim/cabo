@@ -1,13 +1,16 @@
 import { Button } from "@/components/ui/button";
-import { socket } from "./services/socket";
 import { useEffect, useState } from "react";
-import GameState from "../../shared/types/GameState";
 import Card from "../../shared/types/Card";
+import { type ClientGameState } from "../../shared/types/ClientGameState";
+import { socket } from "./services/socket";
+import Player from "../../shared/types/Player";
+import Hand from "../../shared/types/Hand";
 
 function App() {
-  const [gameState, setGameState] = useState<GameState>();
+  const [clientGameState, setClientGameState] = useState<ClientGameState>();
   const [card, setCard] = useState<Card>();
   const [power, setPower] = useState("");
+  const [self, setSelf] = useState<Player | null>(null);
 
   const handleListPlayers = () => {
     socket.emit("listPlayers");
@@ -40,9 +43,12 @@ function App() {
       console.log("players: ", data);
     });
 
-    socket.on("stateUpdate", (data) => {
+    socket.on("stateUpdate", (data: ClientGameState) => {
       console.log("state: ", data);
-      setGameState(data);
+      setClientGameState(data);
+      const player = new Player(data.self.id);
+      player.hand = new Hand(data.self.hand.cards);
+      setSelf(player);
     });
 
     socket.on("drawResult", (data) => {
@@ -73,12 +79,16 @@ function App() {
       socket.off("powerless");
     };
   }, []);
-
+  if (self) {
+    console.log(self.hand);
+  }
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-2">
-      <h4 className="font-semibold">{`${gameState?.players[gameState?.playerTurn].id}'s turn`}</h4>
-      <h4 className="font-semibold">Turn: {gameState?.turn}</h4>
-      <h4 className="font-semibold">Phase: {gameState?.phase}</h4>
+      <h4 className="font-semibold">{`${
+        clientGameState?.players[clientGameState?.playerTurn]
+      }'s turn`}</h4>
+      <h4 className="font-semibold">Turn: {clientGameState?.turn}</h4>
+      <h4 className="font-semibold">Phase: {clientGameState?.phase}</h4>
       {power && <h4 className="font-semibold">Power: {power}</h4>}
       <h4 className="font-semibold">
         Card: {card?.rank} of {card?.suit}
@@ -93,14 +103,26 @@ function App() {
           <Button onClick={handleCallCabo}>callCabo</Button>
           <Button onClick={handleStartGame}>startGame</Button>
         </div>
-        <div className="flex flex-col gap-2">
-          <Button onClick={handleDraw}>card 0</Button>
-          <Button onClick={handleDraw}>card 1</Button>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Button onClick={handleDraw}>card 2</Button>
-          <Button onClick={handleDraw}>card 3</Button>
-        </div>
+        {self && self.hand && (
+          <>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleDraw}>
+                {self.hand.view(0)?.rank} | {self.hand.view(0)?.suit}
+              </Button>
+              <Button onClick={handleDraw}>
+                {self.hand.view(1)?.rank} | {self.hand.view(1)?.suit}
+              </Button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleDraw}>
+                {self.hand.view(2)?.rank} | {self.hand.view(2)?.suit}
+              </Button>
+              <Button onClick={handleDraw}>
+                {self.hand.view(3)?.rank} | {self.hand.view(3)?.suit}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

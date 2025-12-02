@@ -1,9 +1,9 @@
 import Card from "./Card";
 
 export default class Hand {
-  private cards: Array<Card | null> = [];
+  public cards: Array<Card | null> = [];
 
-  constructor(cards?: Card[]) {
+  constructor(cards?: Array<Card | null>) {
     this.cards = cards ?? [];
   }
 

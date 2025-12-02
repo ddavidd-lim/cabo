@@ -1,7 +1,8 @@
 import Player from "./Player";
 
 export type ClientGameState = {
-  players: ({ id: string } | Player)[];
+  players: string[];
+  self: Player;
   turn: number;
   phase: string;
   cabo: boolean;

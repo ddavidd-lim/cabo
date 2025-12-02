@@ -16,10 +16,11 @@ export default class GameManager {
   startGame() {
     this.state.deck.shuffle();
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 4; i++) {
       for (const player of this.state.players) {
+        console.log(`dealing to ${player.id}`);
         const card = this.state.deck.draw();
-        if (card) player.hand.add(card);
+        if (!!card) player.hand.add(card);
       }
     }
   }
@@ -61,12 +62,8 @@ export default class GameManager {
     const gameState = this.state;
 
     return {
-      players: gameState.players.map((p) => {
-        if (p.id === playerId) return p;
-        return {
-          id: p.id,
-        };
-      }),
+      players: gameState.players.map((p) => p.id),
+      self: gameState.players.find((player) => player.id === playerId)!,
       turn: gameState.turn,
       phase: gameState.phase,
       cabo: gameState.cabo,
