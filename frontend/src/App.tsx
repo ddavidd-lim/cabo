@@ -5,12 +5,20 @@ import { type ClientGameState } from "../../shared/types/ClientGameState";
 import { socket } from "./services/socket";
 import Player from "../../shared/types/Player";
 import Hand from "../../shared/types/Hand";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function App() {
   const [clientGameState, setClientGameState] = useState<ClientGameState>();
   const [card, setCard] = useState<Card>();
   const [power, setPower] = useState("");
   const [self, setSelf] = useState<Player | null>(null);
+  const [open, setOpen] = useState(false);
 
   const handleListPlayers = () => {
     socket.emit("listPlayers");
@@ -37,6 +45,7 @@ function App() {
   };
 
   const handleStartGame = () => socket.emit("startGame");
+  const handleEndGame = () => socket.emit("endGame");
 
   useEffect(() => {
     socket.on("listPlayersResult", (data) => {
@@ -58,12 +67,15 @@ function App() {
 
     socket.on("view", () => {
       setPower("view");
+      setOpen(true);
     });
     socket.on("peek", () => {
       setPower("peek");
+      setOpen(true);
     });
     socket.on("swap", () => {
       setPower("swap");
+      setOpen(true);
     });
     socket.on("powerless", () => {
       setPower("powerless");
@@ -102,6 +114,7 @@ function App() {
           <Button onClick={handleSwapCards}>swapCards</Button>
           <Button onClick={handleCallCabo}>callCabo</Button>
           <Button onClick={handleStartGame}>startGame</Button>
+          <Button onClick={handleEndGame}>endGame</Button>
         </div>
         {self && self.hand && (
           <>
@@ -124,6 +137,14 @@ function App() {
           </>
         )}
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>You drew a {card?.rank}</DialogTitle>
+            <DialogDescription>You may perform {power}</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

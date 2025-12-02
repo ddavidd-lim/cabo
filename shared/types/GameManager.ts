@@ -1,4 +1,5 @@
 import { ClientGameState } from "./ClientGameState";
+import Deck from "./Deck";
 import GameState from "./GameState";
 import Player from "./Player";
 
@@ -23,6 +24,10 @@ export default class GameManager {
         if (!!card) player.hand.add(card);
       }
     }
+  }
+
+  endGame() {
+    this.state.deck = new Deck();
   }
 
   swap(p1: number, p1pos: number, p2: number, p2pos: number) {

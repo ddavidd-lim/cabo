@@ -24,6 +24,11 @@ export function createWebsocketServer() {
       io.emit("stateUpdate", game.getClientGameState(socket.id));
     });
 
+    socket.on("endGame", () => {
+      game.endGame();
+      io.emit("stateUpdate", game.getClientGameState(socket.id));
+    });
+
     socket.on("peek", ({ playerIndex, pos }) => {
       const card = game.peek(playerIndex, pos);
       socket.emit("peekResult", card);
@@ -59,18 +64,19 @@ export function createWebsocketServer() {
 
         case 9:
         case 10:
-          console.log("view");
+          console.log("peek");
           socket.emit("peek");
           break;
 
         case 11:
         case 12:
-          console.log("view");
+          console.log("swap");
           socket.emit("swap");
 
           break;
 
         default:
+          console.log("powerless");
           socket.emit("powerless");
           break;
       }
