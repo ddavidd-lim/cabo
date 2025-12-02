@@ -7,6 +7,7 @@ import Card from "../../shared/types/Card";
 function App() {
   const [gameState, setGameState] = useState<GameState>();
   const [card, setCard] = useState<Card>();
+  const [power, setPower] = useState("");
 
   const handleListPlayers = () => {
     socket.emit("listPlayers");
@@ -49,10 +50,27 @@ function App() {
       setCard(data);
     });
 
+    socket.on("view", () => {
+      setPower("view");
+    });
+    socket.on("peek", () => {
+      setPower("peek");
+    });
+    socket.on("swap", () => {
+      setPower("swap");
+    });
+    socket.on("powerless", () => {
+      setPower("powerless");
+    });
+
     return () => {
       socket.off("listPlayersResult");
       socket.off("stateUpdate");
       socket.off("drawResult");
+      socket.off("view");
+      socket.off("peek");
+      socket.off("swap");
+      socket.off("powerless");
     };
   }, []);
 
@@ -61,6 +79,7 @@ function App() {
       <h4 className="font-semibold">{`${gameState?.players[gameState?.playerTurn].id}'s turn`}</h4>
       <h4 className="font-semibold">Turn: {gameState?.turn}</h4>
       <h4 className="font-semibold">Phase: {gameState?.phase}</h4>
+      {power && <h4 className="font-semibold">Power: {power}</h4>}
       <h4 className="font-semibold">
         Card: {card?.rank} of {card?.suit}
       </h4>

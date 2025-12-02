@@ -49,6 +49,31 @@ export function createWebsocketServer() {
       const card = game.state.deck.draw();
       console.log("draw");
       socket.emit("drawResult", card);
+
+      switch (Number(card?.rank)) {
+        case 7:
+        case 8:
+          console.log("view");
+          socket.emit("view");
+          break;
+
+        case 9:
+        case 10:
+          console.log("view");
+          socket.emit("peek");
+          break;
+
+        case 11:
+        case 12:
+          console.log("view");
+          socket.emit("swap");
+
+          break;
+
+        default:
+          socket.emit("powerless");
+          break;
+      }
     });
   });
 
