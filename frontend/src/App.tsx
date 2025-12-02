@@ -2,23 +2,24 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import Card from "../../shared/types/Card";
 import { type ClientGameState } from "../../shared/types/ClientGameState";
-import { socket } from "./services/socket";
-import Player from "../../shared/types/Player";
 import Hand from "../../shared/types/Hand";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import Player from "../../shared/types/Player";
+import { socket } from "./services/socket";
+import PowerDialog from "./components/game/PowerDialog";
+import HandView from "./components/game/HandView";
+import type { PendingSelection } from "./types/PendingSelection";
 
+type SelectedCards = {
+  playerSeat: number;
+  cardPosition: number;
+};
 function App() {
   const [clientGameState, setClientGameState] = useState<ClientGameState>();
-  const [card, setCard] = useState<Card>();
-  const [power, setPower] = useState("");
+  const [drawnCard, setDrawnCard] = useState<Card>();
   const [self, setSelf] = useState<Player | null>(null);
   const [open, setOpen] = useState(false);
+  const [selectedCards, setSelectedCards] = useState<SelectedCards[]>();
+  const [selection, setSelection] = useState<PendingSelection | null>(null);
 
   const handleListPlayers = () => {
     socket.emit("listPlayers");
@@ -44,6 +45,27 @@ function App() {
     socket.emit("callCabo");
   };
 
+  const handleEndTurn = () => {
+    socket.emit("endTurn");
+  };
+
+  const handleOpenPowerDialog = () => {
+    setOpen((prev) => !prev);
+  };
+
+  const handleReplaceCard = () => {
+    if (!selection || selection.playerSeat === null || selection.cardPosition === null) return null;
+    socket.emit("replace", selection.playerSeat, selection.cardPosition);
+  };
+
+  const handleSelectCard = (playerSeat: number, cardPosition: number) => {
+    if (selection?.playerSeat === playerSeat && selection.cardPosition === cardPosition) {
+      setSelection(null);
+    } else {
+      setSelection({ playerSeat, cardPosition });
+    }
+  };
+
   const handleStartGame = () => socket.emit("startGame");
   const handleEndGame = () => socket.emit("endGame");
 
@@ -53,61 +75,45 @@ function App() {
     });
 
     socket.on("stateUpdate", (data: ClientGameState) => {
-      console.log("state: ", data);
       setClientGameState(data);
       const player = new Player(data.self.id);
       player.hand = new Hand(data.self.hand.cards);
+      player.seat = data.self.seat;
       setSelf(player);
     });
 
     socket.on("drawResult", (data) => {
       console.log("card: ", data);
-      setCard(data);
-    });
-
-    socket.on("view", () => {
-      setPower("view");
-      setOpen(true);
-    });
-    socket.on("peek", () => {
-      setPower("peek");
-      setOpen(true);
-    });
-    socket.on("swap", () => {
-      setPower("swap");
-      setOpen(true);
-    });
-    socket.on("powerless", () => {
-      setPower("powerless");
+      setDrawnCard(data);
     });
 
     return () => {
       socket.off("listPlayersResult");
       socket.off("stateUpdate");
       socket.off("drawResult");
-      socket.off("view");
-      socket.off("peek");
-      socket.off("swap");
-      socket.off("powerless");
     };
   }, []);
-  if (self) {
-    console.log(self.hand);
-  }
+
+  const currentPlayer = clientGameState?.players[clientGameState?.playerTurn];
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-2">
-      <h4 className="font-semibold">{`${
-        clientGameState?.players[clientGameState?.playerTurn]
-      }'s turn`}</h4>
+      <h4 className="font-semibold">
+        {`${currentPlayer?.id}'s turn`}, seat {currentPlayer?.seat}
+      </h4>
+      <h4 className="font-semibold">
+        You: {self?.id} | seat: {self?.seat}
+      </h4>
       <h4 className="font-semibold">Turn: {clientGameState?.turn}</h4>
       <h4 className="font-semibold">Phase: {clientGameState?.phase}</h4>
-      {power && <h4 className="font-semibold">Power: {power}</h4>}
       <h4 className="font-semibold">
-        Card: {card?.rank} of {card?.suit}
+        {drawnCard && `Card: ${drawnCard.rank} of ${drawnCard.suit}`}
       </h4>
       <div className="grid grid-cols-3 gap-4">
         <div className="flex flex-col items-center justify-center gap-2">
           <Button onClick={handleDraw}>draw</Button>
+          <Button onClick={handleEndTurn}>endTurn</Button>
+          <Button onClick={handleReplaceCard}>submitReplaceCard</Button>
+          <Button onClick={handleOpenPowerDialog}>openPowerDialog</Button>
           <Button onClick={handleListPlayers}>listPlayers</Button>
           <Button onClick={handleClearPlayers}>clearPlayers</Button>
           <Button onClick={handlePeekCard}>peekCard</Button>
@@ -117,34 +123,18 @@ function App() {
           <Button onClick={handleEndGame}>endGame</Button>
         </div>
         {self && self.hand && (
-          <>
-            <div className="flex flex-col gap-2">
-              <Button onClick={handleDraw}>
-                {self.hand.view(0)?.rank} | {self.hand.view(0)?.suit}
-              </Button>
-              <Button onClick={handleDraw}>
-                {self.hand.view(1)?.rank} | {self.hand.view(1)?.suit}
-              </Button>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button onClick={handleDraw}>
-                {self.hand.view(2)?.rank} | {self.hand.view(2)?.suit}
-              </Button>
-              <Button onClick={handleDraw}>
-                {self.hand.view(3)?.rank} | {self.hand.view(3)?.suit}
-              </Button>
-            </div>
-          </>
+          <HandView selection={selection} handleSelectCard={handleSelectCard} player={self} />
         )}
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>You drew a {card?.rank}</DialogTitle>
-            <DialogDescription>You may perform {power}</DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      {drawnCard && self && (
+        <PowerDialog
+          selection={selection}
+          open={open}
+          setOpen={setOpen}
+          card={drawnCard}
+          self={self}
+        />
+      )}
     </div>
   );
 }

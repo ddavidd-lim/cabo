@@ -9,6 +9,7 @@ export default class GameState {
   finalTurn: number = -1;
   turn: number = 0;
   cabo: boolean = false;
+  currentCard: Card | undefined = undefined;
   discardPile: Card[] = [];
   phase: "waiting" | "dealing" | "playerTurn" | "roundEnd" = "waiting";
 }

@@ -11,7 +11,8 @@ export default class GameManager {
   }
 
   addPlayer(id: string) {
-    this.state.players.push(new Player(id));
+    console.log(`assigned seat ${this.state.players.length} to ${id}`);
+    this.state.players.push(new Player(id, this.state.players.length));
   }
 
   startGame() {
@@ -19,7 +20,6 @@ export default class GameManager {
 
     for (let i = 0; i < 4; i++) {
       for (const player of this.state.players) {
-        console.log(`dealing to ${player.id}`);
         const card = this.state.deck.draw();
         if (!!card) player.hand.add(card);
       }
@@ -34,28 +34,51 @@ export default class GameManager {
     }
   }
 
-  swap(p1: number, p1pos: number, p2: number, p2pos: number) {
+  swap(p1: number, p1cardPos: number, p2: number, p2cardPos: number) {
     const player1 = this.state.players[p1];
     const player2 = this.state.players[p2];
     if (!player1 || !player2) return false;
 
-    const c1 = player1.hand.view(p1pos);
-    const c2 = player2.hand.view(p2pos);
+    const c1 = player1.hand.view(p1cardPos);
+    const c2 = player2.hand.view(p2cardPos);
     if (!c1 || !c2) return false;
 
-    player1.hand.replace(p1pos, c2);
-    player2.hand.replace(p2pos, c1);
+    player1.hand.replace(p1cardPos, c2);
+    player2.hand.replace(p2cardPos, c1);
     return true;
   }
 
-  peek(playerPosition: number, cardPosition: number) {
-    const player = this.state.players[playerPosition];
-    const card = player.hand.view(cardPosition);
-
+  peek(playerSeat: number, cardPosition: number) {
+    const player = this.state.players[playerSeat];
     if (!player) return null;
+
+    const card = player.hand.view(cardPosition);
     if (!card) return null;
 
     return { rank: card.rank };
+  }
+
+  replaceCard(playerSeat: number, cardPosition: number) {
+    console.log(`playerSeat: ${playerSeat}\ncardPosition: ${cardPosition}`);
+    console.log(`players: `, this.state.players.length);
+    console.log(`player seat 0: `, this.state.players[0]);
+    const player = this.state.players[playerSeat];
+    if (!player) {
+      console.error("no player found");
+      return null;
+    }
+
+    const card = player.hand.view(cardPosition);
+    if (!card) {
+      console.error("no card found");
+      return null;
+    }
+
+    if (!this.state.currentCard) return null;
+
+    player.hand.replace(cardPosition, this.state.currentCard);
+    console.log("Successfully replaced card");
+    return true;
   }
 
   callCabo() {}
@@ -69,10 +92,12 @@ export default class GameManager {
 
   getClientGameState(playerId: string): ClientGameState {
     const gameState = this.state;
+    const self = gameState.players.find((player) => player.id === playerId);
 
+    if (!self) throw new Error(`Player with ID ${playerId} not found`);
     return {
-      players: gameState.players.map((p) => p.id),
-      self: gameState.players.find((player) => player.id === playerId)!,
+      players: gameState.players.map(({ id, seat }) => ({ id, seat })),
+      self: { id: self.id, seat: self.seat, hand: self.hand },
       turn: gameState.turn,
       phase: gameState.phase,
       cabo: gameState.cabo,
