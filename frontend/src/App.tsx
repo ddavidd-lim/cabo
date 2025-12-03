@@ -18,8 +18,11 @@ function App() {
   const [drawnCard, setDrawnCard] = useState<Card>();
   const [self, setSelf] = useState<Player | null>(null);
   const [open, setOpen] = useState(false);
-  const [selectedCards, setSelectedCards] = useState<SelectedCards[]>();
+  const [selectedCards, setSelectedCards] = useState<SelectedCards[]>([]);
   const [selection, setSelection] = useState<PendingSelection | null>(null);
+  const [power, setPower] = useState("");
+  const [description, setDescription] = useState("");
+  const [phase, setPhase] = useState<"selectSeat" | "selectOtherCard" | "selectSelfCard">("");
 
   const handleListPlayers = () => {
     socket.emit("listPlayers");
@@ -54,15 +57,27 @@ function App() {
   };
 
   const handleReplaceCard = () => {
-    if (!selection || selection.playerSeat === null || selection.cardPosition === null) return null;
-    socket.emit("replace", selection.playerSeat, selection.cardPosition);
+    if (
+      !selectedCards[0] ||
+      selectedCards[0].playerSeat === null ||
+      selectedCards[0].cardPosition === null
+    )
+      return null;
+    socket.emit("replace", selectedCards[0].playerSeat, selectedCards[0].cardPosition);
+    setSelectedCards([]);
+    setSelection(null);
   };
 
-  const handleSelectCard = (playerSeat: number, cardPosition: number) => {
+  const handleSelectCard = (playerSeat: number | null, cardPosition: number | null) => {
     if (selection?.playerSeat === playerSeat && selection.cardPosition === cardPosition) {
       setSelection(null);
     } else {
       setSelection({ playerSeat, cardPosition });
+      if (playerSeat !== null && cardPosition !== null) {
+        setSelectedCards((prev) => {
+          return [...prev, { playerSeat, cardPosition }];
+        });
+      }
     }
   };
 
@@ -86,11 +101,37 @@ function App() {
       console.log("card: ", data);
       setDrawnCard(data);
     });
-
+    socket.on("viewSelf", () => {
+      setPower("viewSelf");
+      setOpen(true);
+      setDescription(`You may look at one of your own cards.`);
+      setPhase("selectSelfCard");
+    });
+    socket.on("peekOther", () => {
+      setPower("peekOther");
+      setOpen(true);
+      setDescription(`You may look at one of your opponents' cards.`);
+      setPhase("selectSeat");
+    });
+    socket.on("swap", () => {
+      setPower("swap");
+      setOpen(true);
+      setDescription(`You may blind swap any two cards.`);
+      setPhase("selectSeat");
+    });
+    socket.on("powerless", () => {
+      setPower("powerless");
+      setDescription("");
+      setOpen(false);
+    });
     return () => {
       socket.off("listPlayersResult");
       socket.off("stateUpdate");
       socket.off("drawResult");
+      socket.off("viewSelf");
+      socket.off("peekOther");
+      socket.off("swap");
+      socket.off("powerless");
     };
   }, []);
 
@@ -129,10 +170,13 @@ function App() {
       {drawnCard && self && (
         <PowerDialog
           selection={selection}
-          open={open}
+          handleSelectCard={handleSelectCard}
+          open={open && power !== "powerless"}
           setOpen={setOpen}
           card={drawnCard}
           self={self}
+          description={description}
+          phase={phase}
         />
       )}
     </div>

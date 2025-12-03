@@ -46,6 +46,7 @@ export function createWebsocketServer() {
 
     socket.on("replace", (playerSeat, cardPosition) => {
       const success = game.replaceCard(playerSeat, cardPosition);
+      game.nextTurn();
       if (success) io.emit("stateUpdate", game.getClientGameState(socket.id));
     });
 
